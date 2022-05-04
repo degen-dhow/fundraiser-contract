@@ -5,9 +5,6 @@ export const main = Reach.App(() => {
     timedOut: Fun([], Null),
   };
   const I = Participant('Initiator', {
-    // address
-    // duration
-    // threshold
     address: Address,
     duration: UInt,
     threshold: UInt,
@@ -45,7 +42,9 @@ export const main = Reach.App(() => {
   .timeout(relativeTime(duration), () => {
     closeTo(F, timedOut);
   });
-  transfer(contribution).to(address);
+
+  
+  transfer(balance()).to(address);
   commit();
   exit();
 });
