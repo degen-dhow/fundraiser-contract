@@ -17,17 +17,19 @@ console.log('Starting backends...');
 await Promise.all([
   backend.Initiator(ctcInitiator, {
     address: fundee.getAddress(),
-    duration: 5,
-    threshold: 100,
+    duration: 10,
+    threshold: stdlib.parseCurrency(20),
     timedOut: () => console.log('timed out'),
   }),
   backend.Funder(ctcFunder, {
+    shouldContribute: true,
     getContribution: async () => { 
       await stdlib.wait(0);
       return stdlib.parseCurrency(Math.random() * 100);
     },
+    showContribution: (amt) => console.log(`funder 1 gave ${stdlib.bigNumberToNumber(amt)/1_000_000}`),
     timedOut: () => console.log('timed out'),
-  }),
+  })
 ]);
 
 console.log(`${await stdlib.balanceOf(fundee)/1_000_000}`);

@@ -13,6 +13,7 @@ export const main = Reach.App(() => {
   const F = Participant('Funder', {
     shouldContribute: Bool,
     getContribution: Fun([], UInt),
+    showContribution: Fun([UInt], Null),
     ...common,
   });
   const timedOut = () => {
@@ -31,19 +32,29 @@ export const main = Reach.App(() => {
   commit();
 
   F.publish();
-  commit();
 
-  F.only(() => {
-    const contribution = declassify(interact.getContribution());
-  });
+  const [ keepGoing, f, contributions ] =
+  parallelReduce([ true, F, 0 ])
+    .invariant(true)
+    .while(keepGoing)
+    .case(F,
+      (() => ({
+        when: declassify(interact.shouldContribute),
+        msg: declassify(interact.getContribution())
+      })),
+      ((msg) => msg),
+      ((msg) => {
+        const funder = this;
+        F.only(() => interact.showContribution(msg));
+        return [ balance() < threshold, funder, contributions + 1 ];
+      })
+    )
+    .timeout(relativeTime(duration), () => {
+      F.publish();
+      F.interact.timedOut();
+      return [ false, f, contributions ];
+    });
 
-  F.publish(contribution)
-  .pay(contribution)
-  .timeout(relativeTime(duration), () => {
-    closeTo(F, timedOut);
-  });
-
-  
   transfer(balance()).to(address);
   commit();
   exit();
