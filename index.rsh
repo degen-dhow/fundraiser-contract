@@ -1,19 +1,51 @@
 'reach 0.1';
 
 export const main = Reach.App(() => {
-  const A = Participant('Alice', {
-    // Specify Alice's interact interface here
+  const common = {
+    timedOut: Fun([], Null),
+  };
+  const I = Participant('Initiator', {
+    // address
+    // duration
+    // threshold
+    address: Address,
+    duration: UInt,
+    threshold: UInt,
+    ...common,
   });
-  const B = Participant('Bob', {
-    // Specify Bob's interact interface here
+  const F = Participant('Funder', {
+    shouldContribute: Bool,
+    getContribution: Fun([], UInt),
+    ...common,
   });
+  const timedOut = () => {
+    each([I, F], () => {
+      interact.timedOut();
+    });
+  };
   init();
-  // The first one to publish deploys the contract
-  A.publish();
+
+  I.only(() => {
+    const address = declassify(interact.address);
+    const duration = declassify(interact.duration);
+    const threshold = declassify(interact.threshold);
+  });
+  I.publish(address, duration, threshold);
   commit();
-  // The second one to publish always attaches
-  B.publish();
+
+  F.publish();
   commit();
-  // write your program here
+
+  F.only(() => {
+    const contribution = declassify(interact.getContribution());
+  });
+
+  F.publish(contribution)
+  .pay(contribution)
+  .timeout(relativeTime(duration), () => {
+    closeTo(F, timedOut);
+  });
+  transfer(contribution).to(address);
+  commit();
   exit();
 });

@@ -4,24 +4,31 @@ const stdlib = loadStdlib(process.env);
 
 const startingBalance = stdlib.parseCurrency(100);
 
-const [ accAlice, accBob ] =
-  await stdlib.newTestAccounts(2, startingBalance);
-console.log('Hello, Alice and Bob!');
+const [ accInitiator, accFunder, accFunder2, fundee ] =
+  await stdlib.newTestAccounts(4, startingBalance);
+console.log('Launching four accounts');
 
 console.log('Launching...');
-const ctcAlice = accAlice.contract(backend);
-const ctcBob = accBob.contract(backend, ctcAlice.getInfo());
+const ctcInitiator = accInitiator.contract(backend);
+const ctcInfo = ctcInitiator.getInfo();
+const ctcFunder = accFunder.contract(backend, ctcInfo);
 
 console.log('Starting backends...');
 await Promise.all([
-  backend.Alice(ctcAlice, {
-    ...stdlib.hasRandom,
-    // implement Alice's interact object here
+  backend.Initiator(ctcInitiator, {
+    address: fundee.getAddress(),
+    duration: 5,
+    threshold: 100,
+    timedOut: () => console.log('timed out'),
   }),
-  backend.Bob(ctcBob, {
-    ...stdlib.hasRandom,
-    // implement Bob's interact object here
+  backend.Funder(ctcFunder, {
+    getContribution: async () => { 
+      await stdlib.wait(0);
+      return stdlib.parseCurrency(Math.random() * 100);
+    },
+    timedOut: () => console.log('timed out'),
   }),
 ]);
 
-console.log('Goodbye, Alice and Bob!');
+console.log(`${await stdlib.balanceOf(fundee)/1_000_000}`);
+console.log('Goodbye!');
